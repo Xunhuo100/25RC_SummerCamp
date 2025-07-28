@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "myuart.h": "c",
+        "tim.h": "c",
+        "mychassis.h": "c"
+    }
+}
