@@ -1,23 +1,22 @@
-#include "stm32f10x.h"
+#include "main.h"
+#include "OLED.h"
 #include "OLED_Font.h"
 
-/*引脚配置*/
-#define OLED_W_SCL(x)		GPIO_WriteBit(GPIOB, GPIO_Pin_8, (BitAction)(x))
-#define OLED_W_SDA(x)		GPIO_WriteBit(GPIOB, GPIO_Pin_9, (BitAction)(x))
+
 
 /*引脚初始化*/
 void OLED_I2C_Init(void)
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-	
-	GPIO_InitTypeDef GPIO_InitStructure;
- 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
- 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
- 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	
+//    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+//	
+//	GPIO_InitTypeDef GPIO_InitStructure;
+// 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
+//	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+// 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+// 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+//	
 	OLED_W_SCL(1);
 	OLED_W_SDA(1);
 }
@@ -318,4 +317,94 @@ void OLED_Init(void)
 	OLED_WriteCommand(0xAF);	//开启显示
 		
 	OLED_Clear();				//OLED清屏
+}
+
+//================================================================================================//
+
+void OLED_ShowTest(uint8_t Line, uint8_t Column)
+{      	
+	uint8_t i;
+	OLED_SetCursor((Line - 1) * 2, (Column - 1) * 8);		//设置光标位置在上半部分
+	for (i = 0; i < 8; i++)
+	{
+		OLED_WriteData(OLED_F8x16['~'+1 - ' '][i]);			//显示上半部分内容
+	}
+	OLED_SetCursor((Line - 1) * 2 + 1, (Column - 1) * 8);	//设置光标位置在下半部分
+	for (i = 0; i < 8; i++)
+	{
+		OLED_WriteData(OLED_F8x16['~'+1 - ' '][i + 8]);		//显示下半部分内容
+	}
+}
+
+void OLED_ShowSelectedChar(uint8_t Line, uint8_t Column, char Char)
+{
+	uint8_t s_Char[16];
+	int i;
+	for(i=0;i<16;i++)
+		s_Char[i]=~OLED_F8x16[Char-' '][i];
+	
+	OLED_SetCursor((Line - 1) * 2, (Column - 1) * 8);	//设置光标位置在上半部分
+	for (i = 0; i < 8; i++)
+	{
+		OLED_WriteData(s_Char[i]);			//显示上半部分内容
+	}
+	OLED_SetCursor((Line - 1) * 2 + 1, (Column - 1) * 8);	//设置光标位置在下半部分
+	for (i = 0; i < 8; i++)
+	{
+		OLED_WriteData(s_Char[i+8]);		//显示下半部分内容
+	}
+
+}
+
+void OLED_ShowSelectedString(uint8_t Line, uint8_t Column, char* string)
+{
+	uint8_t i;
+	for (i = 0; string[i] != '\0'; i++)
+	{
+		OLED_ShowSelectedChar(Line, Column + i, string[i]);
+	}
+}
+
+void OLED_ShowSelectedNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Length)
+{
+	uint8_t i;
+	for (i = 0; i < Length; i++)							
+	{
+		OLED_ShowSelectedChar(Line, Column + i, Number / OLED_Pow(10, Length - i - 1) % 10 + '0');
+	}
+}
+
+void OLED_ShowFloat(uint8_t Line, uint8_t Column, float Float,uint8_t IntLength,uint8_t DecLenth,int SelectState)//1为选中，0为不选中
+{
+	int i=0;
+	if(SelectState==1)
+	{
+		if(Float <0.0f){
+			OLED_ShowSelectedChar(Line, Column, '-');
+			Column++;
+			Float = -Float;
+		}
+		uint32_t Int=(int)Float;
+		float Dec=Float-Int;
+		for(i=0;i<DecLenth;i++)
+			Dec*=10;
+		OLED_ShowSelectedNum(Line,Column,Int,IntLength);
+		OLED_ShowSelectedChar(Line,Column+IntLength,'.');
+		OLED_ShowSelectedNum(Line,Column+IntLength+1,(int)Dec,DecLenth);
+	}
+	else if(SelectState==0)
+		{
+		if(Float <0.0f){
+			OLED_ShowChar(Line, Column, '-');
+			Column++;
+			Float = -Float;
+		}
+		uint32_t Int=(int)Float;
+		float Dec=Float-Int;
+		for(i=0;i<DecLenth;i++)
+			Dec*=10;
+		OLED_ShowNum(Line,Column,Int,IntLength);
+		OLED_ShowChar(Line,Column+IntLength,'.');
+		OLED_ShowNum(Line,Column+IntLength+1,(int)Dec,DecLenth);
+	}
 }
